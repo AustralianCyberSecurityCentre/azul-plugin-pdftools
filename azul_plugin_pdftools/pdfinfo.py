@@ -50,18 +50,18 @@ class PDFInfoError(Exception):
 class ExecutionError(PDFInfoError):
     """Unable to execute the pdfinfo command-line tool for some reason."""
 
-    def __init__(self, msg, stderr=""):
+    def __init__(self, msg, stderr):
         """Wrap the stderr from pdfinfo as an exception."""
-        PDFInfoError.__init__(self, msg)
+        super().__init__(msg, stderr)
         self.stderr = stderr
 
 
 class EncryptedError(PDFInfoError):
     """Has unknown user password, can't decrypt."""
 
-    def __init__(self, msg, stderr=""):
+    def __init__(self, msg, stderr):
         """Wrap the stderr from pdfinfo as an exception."""
-        PDFInfoError.__init__(self, msg)
+        super().__init__(msg, stderr)
         self.stderr = stderr
 
 
