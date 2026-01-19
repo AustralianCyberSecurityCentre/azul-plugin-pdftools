@@ -338,7 +338,7 @@ def Main():
         usage="usage: %prog [options] [file]\n" + __description__, version="%prog " + __version__
     )
     oParser.add_option("-m", "--man", action="store_true", default=False, help="Print manual")
-    (options, args) = oParser.parse_args()
+    options, args = oParser.parse_args()
 
     if options.man:
         oParser.print_help()

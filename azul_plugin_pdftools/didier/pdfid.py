@@ -506,9 +506,9 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
             oPDFDate = cPDFDate()
             oEntropy = cEntropy()
             oPDFEOF = cPDFEOF()
-        (bytesHeader, pdfHeader) = FindPDFHeaderRelaxed(oBinaryFile)
+        bytesHeader, pdfHeader = FindPDFHeaderRelaxed(oBinaryFile)
         if disarm:
-            (pathfile, extension) = os.path.splitext(file)
+            pathfile, extension = os.path.splitext(file)
             fOut = open(pathfile + ".disarmed" + extension, "wb")
             for byteHeader in bytesHeader:
                 fOut.write(C2BIP3(chr(byteHeader)))
@@ -557,14 +557,14 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
                     else:
                         oBinaryFile.unget(d2)
                         oBinaryFile.unget(d1)
-                        (word, wordExact, hexcode, lastName, insideStream) = UpdateWords(
+                        word, wordExact, hexcode, lastName, insideStream = UpdateWords(
                             word, wordExact, slash, words, hexcode, allNames, lastName, insideStream, oEntropy, fOut
                         )
                         if disarm:
                             fOut.write(C2BIP3(char))
                 else:
                     oBinaryFile.unget(d1)
-                    (word, wordExact, hexcode, lastName, insideStream) = UpdateWords(
+                    word, wordExact, hexcode, lastName, insideStream = UpdateWords(
                         word, wordExact, slash, words, hexcode, allNames, lastName, insideStream, oEntropy, fOut
                     )
                     if disarm:
@@ -572,7 +572,7 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
             else:
                 oCVE_2009_3459.Check(lastName, word)
 
-                (word, wordExact, hexcode, lastName, insideStream) = UpdateWords(
+                word, wordExact, hexcode, lastName, insideStream = UpdateWords(
                     word, wordExact, slash, words, hexcode, allNames, lastName, insideStream, oEntropy, fOut
                 )
                 if char == "/":
@@ -592,7 +592,7 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
                 oPDFEOF.parse(char)
 
             byte = oBinaryFile.byte()
-        (word, wordExact, hexcode, lastName, insideStream) = UpdateWords(
+        word, wordExact, hexcode, lastName, insideStream = UpdateWords(
             word, wordExact, slash, words, hexcode, allNames, lastName, insideStream, oEntropy, fOut
         )
 
@@ -626,7 +626,7 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
     attCountNonStream = xmlDoc.createAttribute("NonStreamCount")
     xmlDoc.documentElement.setAttributeNode(attCountNonStream)
     if oEntropy != None:
-        (countAll, entropyAll, countStream, entropyStream, countNonStream, entropyNonStream) = oEntropy.calc()
+        countAll, entropyAll, countStream, entropyStream, countNonStream, entropyNonStream = oEntropy.calc()
         attEntropyAll.nodeValue = "%f" % entropyAll
         attCountAll.nodeValue = "%d" % countAll
         if entropyStream == None:
@@ -1194,7 +1194,7 @@ https://DidierStevens.com"""
         default=False,
         help="Recurse directories (wildcards and here files (@...) allowed)",
     )
-    (options, args) = oParser.parse_args()
+    options, args = oParser.parse_args()
 
     if len(args) == 0:
         if options.disarm:
