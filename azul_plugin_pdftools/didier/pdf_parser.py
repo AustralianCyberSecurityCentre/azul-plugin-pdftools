@@ -1526,7 +1526,7 @@ def Main():
     )
     oParser.add_option("--decoderoptions", type=str, default="", help="options for the decoder")
     oParser.add_option("-k", "--key", help="key to search in dictionaries")
-    (options, args) = oParser.parse_args(GetArguments())
+    options, args = oParser.parse_args(GetArguments())
 
     if options.man:
         oParser.print_help()
