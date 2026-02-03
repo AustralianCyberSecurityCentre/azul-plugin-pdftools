@@ -16,7 +16,7 @@ except OSError as err:
         "PdfInfo requires the program 'pdfinfo' to be installed.",
         "Please run apt-get install poppler-utils",
     ]
-    raise ImportError("\n".join(msg))
+    raise ImportError("\n".join(msg)) from err
 
 
 def convert_bool(string):
