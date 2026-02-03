@@ -107,7 +107,7 @@ class AzulPluginPdfInfo(BinaryPlugin):
         if not feat:
             return
 
-        if val and feat.type == int:
+        if val and feat.type is int:
             val = int(val)
 
         self.features.setdefault(feature_name, []).append(val)

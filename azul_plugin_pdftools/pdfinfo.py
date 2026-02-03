@@ -7,8 +7,10 @@ from datetime import datetime
 
 # installation check
 try:
-    subprocess.Popen(  # noqa: S603, S607 # nosec B603 B607
-        ["pdfinfo"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    subprocess.Popen(
+        ["pdfinfo"],  # noqa: S607
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     ).communicate()
 except OSError as err:
     msg = [
@@ -16,7 +18,7 @@ except OSError as err:
         "PdfInfo requires the program 'pdfinfo' to be installed.",
         "Please run apt-get install poppler-utils",
     ]
-    raise ImportError("\n".join(msg))
+    raise ImportError("\n".join(msg)) from err
 
 
 def convert_bool(string):
@@ -98,7 +100,7 @@ class PDFInfo(object):
         cmd.append(path)
         env = dict(os.environ)
         env["TZ"] = "UTC"
-        p = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)  # noqa: S603 # nosec B603
+        p = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)  # noqa: S603 # noqa: S603
         stdout, stderr = p.communicate()
         # convert bytes to strings
         stdout = stdout.decode("utf-8")
