@@ -1,11 +1,11 @@
-# flake8: noqa
+# ruff: noqa
 
 __description__ = "pdf-parser, use it to parse a PDF document"
 __author__ = "Didier Stevens"
-__version__ = "0.7.4"
-__date__ = "2019/11/05"
+__version__ = "0.7.14"
+__date__ = "2026/03/07"
 __minimum_python_version__ = (2, 5, 1)
-__maximum_python_version__ = (3, 7, 5)
+__maximum_python_version__ = (3, 13, 9)
 
 """
 Source code put in public domain by Didier Stevens, no Copyright
@@ -69,6 +69,18 @@ History:
   2019/07/30: bug fixes (including fixes Josef Hinteregger)
   2019/09/26: V0.7.3 added multiple id selection to option -o; added man page (-m); added environment variable PDFPARSER_OPTIONS; bug fixes
   2019/11/05: V0.7.4 fixed plugin path when compiled with pyinstaller, replaced eval with int
+  2021/07/03: V0.7.5 bug fixes; fixed ASCII85Decode Python 3 bug thanks to R Primus
+  2021/11/23: V0.7.6 Python 3 bug fixes
+  2022/05/24: bug fixes
+  2022/11/09: V0.7.7 added support for environment variable DSS_DEFAULT_HASH_ALGORITHMS
+  2023/01/03: V0.7.8 added unreferenced objects to statistics
+  2024/03/21: V0.7.9 added option jsonoutput; added verbose YARA rules
+  2024/10/25: V0.7.10 /ObjStm fix (x9090 PR)
+  2024/10/26: added pyzipper support
+  2025/03/04: V0.7.11 regex string fix Python 3.12 xambroz
+  2025/04/21: V0.7.12 bugfix YARACompile
+  2025/08/31: V0.7.13 bugfix user report
+  2026/03/07: V0.7.14 update for yara.StringMatch
 
 Todo:
   - handle printf todo
@@ -76,26 +88,26 @@ Todo:
 
 """
 
+import re
+import optparse
+import zlib
 import binascii
 import hashlib
-import optparse
-import os
-import re
 import sys
-import textwrap
 import time
-import zipfile
-import zlib
+import os
+import textwrap
+import json
 
 if sys.version_info[0] >= 3:
-    import urllib.request
     from io import StringIO
+    import urllib.request
 
     urllib23 = urllib.request
     import configparser as ConfigParser
 else:
-    import urllib2
     from cStringIO import StringIO
+    import urllib2
 
     urllib23 = urllib2
     import ConfigParser
@@ -103,6 +115,10 @@ try:
     import yara
 except:
     pass
+try:
+    import pyzipper as zipfile
+except ImportError:
+    import zipfile
 
 CHAR_WHITESPACE = 1
 CHAR_DELIMITER = 2
@@ -139,6 +155,13 @@ Use this to define options you want included with each use of pdf-parser.py.
 Like option -O, to parse stream objects (/ObjStm).
 By defining PDFPARSER_OPTIONS=-O, pdf-parser will always parse stream objects (when found).
 PS: this feature is experimental.
+
+Option -H calculates the MD5 hash by default.
+This can be changed by setting environment variable DSS_DEFAULT_HASH_ALGORITHMS.
+Like this: set DSS_DEFAULT_HASH_ALGORITHMS=sha256
+
+Option --jsonoutput produces JSON output with the stream content of all objects with streams. Options -f and --overridingfilters apply.
+For example, if option -f is used, the JSON output contains the filtered streams, otherwise the JSON output contains the unfiltered streams.
 
 """
     for line in manual.split("\n"):
@@ -200,6 +223,13 @@ def Obj2Str(content):
     return "".join(map(lambda x: repr(x[1])[1:-1], CopyWithoutWhiteSpace(content)))
 
 
+def CreateZipFileObject(arg1, arg2):
+    if "AESZipFile" in dir(zipfile):
+        return zipfile.AESZipFile(arg1, arg2)
+    else:
+        return zipfile.ZipFile(arg1, arg2)
+
+
 class cPDFDocument:
     def __init__(self, file):
         self.file = file
@@ -217,7 +247,7 @@ class cPDFDocument:
                 sys.exit()
         elif file.lower().endswith(".zip"):
             try:
-                self.zipfile = zipfile.ZipFile(file, "r")
+                self.zipfile = CreateZipFileObject(file, "r")
                 self.infile = self.zipfile.open(self.zipfile.infolist()[0], "r", C2BIP3("infected"))
             except:
                 print("Error opening file %s" % file)
@@ -533,6 +563,14 @@ class cPDFElementIndirectObject:
                 position -= 1
             if position < 0:
                 return
+            if self.content[position][1].endswith("endstream\n"):
+                self.content = (
+                    self.content[0:position]
+                    + [(self.content[position][0], self.content[position][1][: -len("endstream\n")])]
+                    + [(CHAR_REGULAR, "endstream")]
+                    + self.content[position + 1 :]
+                )
+                return
             if self.content[position][0] != CHAR_REGULAR:
                 return
             if self.content[position][1] == "endstream":
@@ -614,6 +652,8 @@ class cPDFElementIndirectObject:
         streamData = self.Stream(filter, overridingfilters)
         if filter and streamData == "No filters":
             streamData = self.Stream(False, overridingfilters)
+        if isinstance(streamData, bytes):
+            keyword = keyword.encode()
         if regex:
             return re.search(keyword, streamData, IIf(casesensitive, 0, re.I))
         elif casesensitive:
@@ -859,6 +899,7 @@ class cPDFParseDictionary:
                 else:
                     value.append(ConditionalCanonicalize(tokens[0][1], self.nocanonicalizedoutput))
             tokens = tokens[1:]
+        return None, tokens
 
     def Retrieve(self):
         return self.parsed
@@ -925,7 +966,7 @@ def FormatOutput(data, raw):
 # Fix for http://bugs.python.org/issue11395
 def StdoutWriteChunked(data):
     if sys.version_info[0] > 2:
-        sys.stdout.buffer.write(data)
+        sys.stdout.buffer.write(C2BIP3(data))
     else:
         while data != "":
             sys.stdout.write(data[0:10000])
@@ -1052,7 +1093,7 @@ def ASCII85Decode(data):
     import struct
 
     n = b = 0
-    out = ""
+    out = b""
     for c in data:
         if "!" <= c and c <= "u":
             n += 1
@@ -1062,7 +1103,7 @@ def ASCII85Decode(data):
                 n = b = 0
         elif c == "z":
             assert n == 0
-            out += "\0\0\0\0"
+            out += b"\0\0\0\0"
         elif c == "~":
             if n:
                 for _ in range(5 - n):
@@ -1221,7 +1262,7 @@ def PrintGenerateObject(object, options, newId=None):
                         objectId,
                         object.version,
                         repr(object.Stream(False, options.overridingfilters).rstrip()),
-                        repr(re.sub("/Length\s+\d+", "/Length %d", FormatOutput(dataPrecedingStream, True)).strip()),
+                        repr(re.sub(r"/Length\s+\d+", "/Length %d", FormatOutput(dataPrecedingStream, True)).strip()),
                     )
                 )
             else:
@@ -1243,7 +1284,7 @@ def PrintGenerateObject(object, options, newId=None):
                     objectId,
                     object.version,
                     repr(object.Stream(False, options.overridingfilters).rstrip()),
-                    repr(re.sub("/Length\s+\d+", "/Length %d", FormatOutput(dataPrecedingStream, True)).strip()),
+                    repr(re.sub(r"/Length\s+\d+", "/Length %d", FormatOutput(dataPrecedingStream, True)).strip()),
                 )
             )
     else:
@@ -1287,16 +1328,20 @@ def ProcessAt(argument):
 def YARACompile(ruledata):
     if ruledata.startswith("#"):
         if ruledata.startswith("#h#"):
-            rule = binascii.a2b_hex(ruledata[3:])
+            rule = binascii.a2b_hex(ruledata[3:]).decode("latin")
         elif ruledata.startswith("#b#"):
-            rule = binascii.a2b_base64(ruledata[3:])
+            rule = binascii.a2b_base64(ruledata[3:]).decode("latin")
         elif ruledata.startswith("#s#"):
             rule = 'rule string {strings: $a = "%s" ascii wide nocase condition: $a}' % ruledata[3:]
         elif ruledata.startswith("#q#"):
             rule = ruledata[3:].replace("'", '"')
+        elif ruledata.startswith("#x#"):
+            rule = "rule hexadecimal {strings: $a = { %s } condition: $a}" % ruledata[3:]
+        elif ruledata.startswith("#r#"):
+            rule = "rule regex {strings: $a = /%s/ ascii wide nocase condition: $a}" % ruledata[3:]
         else:
             rule = ruledata[1:]
-        return yara.compile(source=rule)
+        return yara.compile(source=rule), rule
     else:
         dFilepaths = {}
         if os.path.isdir(ruledata):
@@ -1307,7 +1352,7 @@ def YARACompile(ruledata):
         else:
             for filename in ProcessAt(ruledata):
                 dFilepaths[filename] = filename
-        return yara.compile(filepaths=dFilepaths)
+        return yara.compile(filepaths=dFilepaths), ",".join(dFilepaths.values())
 
 
 def AddDecoder(cClass):
@@ -1446,6 +1491,91 @@ def GetArguments():
     return envvar.split(" ") + arguments
 
 
+class cHashCRC32:
+    def __init__(self):
+        self.crc32 = None
+
+    def update(self, data):
+        self.crc32 = zlib.crc32(data)
+
+    def hexdigest(self):
+        return "%08x" % (self.crc32 & 0xFFFFFFFF)
+
+
+class cHashChecksum8:
+    def __init__(self):
+        self.sum = 0
+
+    def update(self, data):
+        if sys.version_info[0] >= 3:
+            self.sum += sum(data)
+        else:
+            self.sum += sum(map(ord, data))
+
+    def hexdigest(self):
+        return "%08x" % (self.sum)
+
+
+dSpecialHashes = {"crc32": cHashCRC32, "checksum8": cHashChecksum8}
+
+
+def GetHashObjects(algorithms):
+    global dSpecialHashes
+
+    dHashes = {}
+
+    if algorithms == "":
+        algorithms = os.getenv("DSS_DEFAULT_HASH_ALGORITHMS", "md5")
+    if "," in algorithms:
+        hashes = algorithms.split(",")
+    else:
+        hashes = algorithms.split(";")
+    for name in hashes:
+        if not name in dSpecialHashes.keys() and not name in hashlib.algorithms_available:
+            print("Error: unknown hash algorithm: %s" % name)
+            print(
+                "Available hash algorithms: "
+                + " ".join([name for name in list(hashlib.algorithms_available)] + list(dSpecialHashes.keys()))
+            )
+            return [], {}
+        elif name in dSpecialHashes.keys():
+            dHashes[name] = dSpecialHashes[name]()
+        else:
+            dHashes[name] = hashlib.new(name)
+
+    return hashes, dHashes
+
+
+def CalculateChosenHash(data):
+    hashes, dHashes = GetHashObjects("")
+    dHashes[hashes[0]].update(data)
+    return dHashes[hashes[0]].hexdigest(), hashes[0]
+
+
+class cMyJSONOutput:
+    def __init__(self):
+        self.items = []
+        self.counter = 1
+
+    def AddIdItem(self, id, name, data):
+        self.items.append({"id": id, "name": name, "content": binascii.b2a_base64(data).strip(b"\n").decode()})
+
+    def AddItem(self, name, data):
+        self.AddIdItem(self.counter, name, data)
+        self.counter += 1
+
+    def GetJSON(self):
+        return json.dumps(
+            {
+                "version": 2,
+                "id": "didierstevens.com",
+                "type": "content",
+                "fields": ["id", "name", "content"],
+                "items": self.items,
+            }
+        )
+
+
 def Main():
     """pdf-parser, use it to parse a PDF document"""
 
@@ -1526,7 +1656,8 @@ def Main():
     )
     oParser.add_option("--decoderoptions", type=str, default="", help="options for the decoder")
     oParser.add_option("-k", "--key", help="key to search in dictionaries")
-    options, args = oParser.parse_args(GetArguments())
+    oParser.add_option("-j", "--jsonoutput", action="store_true", default=False, help="produce json output")
+    (options, args) = oParser.parse_args(GetArguments())
 
     if options.man:
         oParser.print_help()
@@ -1552,6 +1683,9 @@ def Main():
         cntStartXref = 0
         cntIndirectObject = 0
         dicObjectTypes = {}
+        objectsAll = set()
+        objectsReferenced = set()
+        objectsWithStream = []
         keywords = [
             "/JS",
             "/JavaScript",
@@ -1665,9 +1799,12 @@ def Main():
             if not "yara" in sys.modules:
                 print("Error: option yara requires the YARA Python module.")
                 return
-            rules = YARACompile(options.yara)
+            rules, rulesVerbose = YARACompile(options.yara)
+            if options.verbose:
+                print(rulesVerbose)
 
         oPDFParserOBJSTM = None
+        oMyJSONOutput = cMyJSONOutput()
         while True:
             if oPDFParserOBJSTM == None:
                 object = oPDFParser.GetObject()
@@ -1686,7 +1823,9 @@ def Main():
                 oPDFParseDictionary = cPDFParseDictionary(object.ContainsStream(), options.nocanonicalizedoutput)
                 numberOfObjects = int(oPDFParseDictionary.Get("/N")[0])
                 offsetFirstObject = int(oPDFParseDictionary.Get("/First")[0])
-                indexes = list(map(int, C2SIP3(object.Stream())[:offsetFirstObject].strip().split(" ")))
+                indexes = list(
+                    map(int, C2SIP3(object.Stream())[:offsetFirstObject].strip().replace("\n", " ").split(" "))
+                )
                 if len(indexes) % 2 != 0 or len(indexes) / 2 != numberOfObjects:
                     raise Exception("Error in index of /ObjStm stream")
                 streamObject = C2SIP3(object.Stream()[offsetFirstObject:])
@@ -1711,6 +1850,15 @@ def Main():
                         cntXref += 1
                     elif object.type == PDF_ELEMENT_TRAILER:
                         cntTrailer += 1
+                        oPDFParseDictionary = cPDFParseDictionary(object.content[1:], options.nocanonicalizedoutput)
+                        for keyTrailer, valueTrailer in oPDFParseDictionary.parsed:
+                            if (
+                                len(valueTrailer) == 3
+                                and valueTrailer[2] == "R"
+                                and IsNumeric(valueTrailer[0])
+                                and IsNumeric(valueTrailer[1])
+                            ):
+                                objectsReferenced.add(tuple(valueTrailer))
                     elif object.type == PDF_ELEMENT_STARTXREF:
                         cntStartXref += 1
                     elif object.type == PDF_ELEMENT_INDIRECT_OBJECT:
@@ -1723,11 +1871,23 @@ def Main():
                         for keyword in dKeywords.keys():
                             if object.ContainsName(keyword):
                                 dKeywords[keyword].append(object.id)
+                        if object.ContainsStream():
+                            objectsWithStream.append(object.id)
+                        for reference in object.GetReferences():
+                            objectsReferenced.add(reference)
+                        objectsAll.add((str(object.id), str(object.version), "R"))
+                elif options.jsonoutput:
+                    if object.type == PDF_ELEMENT_INDIRECT_OBJECT:
+                        if object.ContainsStream():
+                            filtered = object.Stream(options.filter == True, options.overridingfilters)
+                            if filtered == []:
+                                filtered = ""
+                            oMyJSONOutput.AddItem("obj %s %s" % (object.id, object.version), C2BIP3(filtered))
                 else:
                     if object.type == PDF_ELEMENT_COMMENT and selectComment:
                         if options.generate:
                             comment = object.comment[1:].rstrip()
-                            if re.match("PDF-\d\.\d", comment):
+                            if re.match(r"PDF-\d\.\d", comment):
                                 print("    oPDF.header('%s')" % comment[4:])
                             elif comment != "%EOF":
                                 print("    oPDF.comment(%s)" % repr(comment))
@@ -1800,7 +1960,8 @@ def Main():
                         elif options.hash:
                             print("obj %d %d" % (object.id, object.version))
                             rawContent = FormatOutput(object.content, True)
-                            print(" len: %d md5: %s" % (len(rawContent), hashlib.md5(rawContent).hexdigest()))
+                            hashHexdigest, hashAlgo = CalculateChosenHash(rawContent.encode("latin"))
+                            print(" len: %d %s: %s" % (len(rawContent), hashAlgo, hashHexdigest))
                             print("")
                         elif options.searchstream:
                             if object.StreamContains(
@@ -1831,10 +1992,21 @@ def Main():
                                             )
                                         )
                                         if options.yarastrings:
-                                            for stringdata in yaraResult.strings:
-                                                print("%06x %s:" % (stringdata[0], stringdata[1]))
-                                                print(" %s" % binascii.hexlify(C2BIP3(stringdata[2])))
-                                                print(" %s" % repr(stringdata[2]))
+                                            for oStringMatch in yaraResult.strings:
+                                                for oStringMatchInstance in oStringMatch.instances:
+                                                    print(
+                                                        "%06x %02x %s:"
+                                                        % (
+                                                            oStringMatchInstance.offset,
+                                                            oStringMatchInstance.xor_key,
+                                                            oStringMatch.identifier,
+                                                        )
+                                                    )
+                                                    print(
+                                                        " %s"
+                                                        % binascii.hexlify(oStringMatchInstance.plaintext()).decode()
+                                                    )
+                                                    print(" %s" % repr(oStringMatchInstance.plaintext()))
                                     PrintObject(object, options)
                         elif options.generateembedded != 0:
                             if object.id == options.generateembedded:
@@ -1860,11 +2032,34 @@ def Main():
             print("Trailer: %s" % cntTrailer)
             print("StartXref: %s" % cntStartXref)
             print("Indirect object: %s" % cntIndirectObject)
+            print("Indirect objects with a stream: %s" % ", ".join([str(id) for id in objectsWithStream]))
+            objectsUnreferenced = objectsAll - objectsReferenced
             for key in sorted(dicObjectTypes.keys()):
                 print(
                     " %s %d: %s"
                     % (key, len(dicObjectTypes[key]), ", ".join(map(lambda x: "%d" % x, dicObjectTypes[key])))
                 )
+            if len(objectsUnreferenced) > 0:
+                print(
+                    "Unreferenced indirect objects: %s"
+                    % ", ".join(
+                        [" ".join(reference) for reference in sorted(objectsUnreferenced, key=lambda a: int(a[0]))]
+                    )
+                )
+                if "/ObjStm" in dicObjectTypes:
+                    objectsUnreferencedMinusObjStm = set()
+                    for unreferencedObject in objectsUnreferenced:
+                        if not int(unreferencedObject[0]) in dicObjectTypes["/ObjStm"]:
+                            objectsUnreferencedMinusObjStm.add(unreferencedObject)
+                    print(
+                        "Unreferenced indirect objects without /ObjStm objects: %s"
+                        % ", ".join(
+                            [
+                                " ".join(reference)
+                                for reference in sorted(objectsUnreferencedMinusObjStm, key=lambda a: int(a[0]))
+                            ]
+                        )
+                    )
             if sum(map(len, dKeywords.values())) > 0:
                 print("Search keywords:")
                 for keyword in keywords:
@@ -1877,6 +2072,9 @@ def Main():
                                 ", ".join(map(lambda x: "%d" % x, dKeywords[keyword])),
                             )
                         )
+
+        if options.jsonoutput:
+            print(oMyJSONOutput.GetJSON())
 
         if options.generate or options.generateembedded != 0:
             print("    oPDF.xrefAndTrailer('%s')" % " ".join(savedRoot))

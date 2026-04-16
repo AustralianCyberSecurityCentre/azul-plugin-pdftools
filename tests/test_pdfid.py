@@ -53,7 +53,7 @@ class TestExecute(test_template.TestPlugin):
                                 FV(16, label="endobj"),
                                 FV(16, label="obj"),
                             ],
-                            "pdf_trailing_bytes": [FV(2273)],
+                            "pdf_trailing_bytes": [FV("2273")],
                             "pdf_version": [FV("%PDF-1.4")],
                         },
                     )
