@@ -1,9 +1,9 @@
-# flake8: noqa
+# ruff: noqa
 
 __description__ = "Tool to test a PDF file"
 __author__ = "Didier Stevens"
-__version__ = "0.2.7.2"
-__date__ = "2020/04/08"
+__version__ = "0.2.10"
+__date__ = "2025/03/05"
 
 """
 
@@ -43,12 +43,10 @@ History:
   2013/11/09: added option -o
   2013/11/15: refactoring
   2014/09/30: added CSV header
-  2014/02/04: V0.1.2.1: fixed cntCharsAfterLastEOF bug when no EOF is present in whole file;
   2014/10/16: V0.2.1: added output when plugin & file not pdf
   2014/10/18: some fixes for Python 3
   2015/08/12: V0.2.2: added option pluginoptions
   2015/08/13: added plugin Instructions method
-  2015/12/04: V0.1.2.2: Changes to custom json output
   2016/04/12: added option literal
   2017/10/29: added pdfid.ini support
   2017/11/05: V0.2.3: added option -n
@@ -58,28 +56,28 @@ History:
   2018/07/05: V0.2.5 introduced cExpandFilenameArguments; renamed option literal to literalfilenames
   2019/09/30: V0.2.6 color bugfix, thanks to Leo
   2019/11/05: V0.2.7 fixed plugin path when compiled with pyinstaller
-  2020/04/08: V0.2.7.1 fix python 3 nonstream entropy - generator issue
-  2020/04/08: V0.2.7.2 read ini file relative to this file, to support use as module
+  2020/11/21: V0.2.8 added data argument to PDFiD function
+  2024/10/26: V0.2.9 added pyzipper support
+  2025/03/05: V0.2.10 bugfix dfrias
 
 Todo:
   - update XML example (entropy, EOF)
   - code review, cleanup
 """
 
-import collections
-import fnmatch
-import glob
-import json
-import math
-import operator
 import optparse
 import os
-import os.path
 import re
-import sys
-import traceback
 import xml.dom.minidom
-import zipfile
+import traceback
+import math
+import operator
+import os.path
+import sys
+import json
+import collections
+import glob
+import fnmatch
 
 if sys.version_info[0] >= 3:
     import urllib.request as urllib23
@@ -89,6 +87,14 @@ if sys.version_info[0] >= 3:
     import configparser as ConfigParser
 else:
     import ConfigParser
+if sys.version_info[0] >= 3:
+    from io import BytesIO as DataIO
+else:
+    from cStringIO import StringIO as DataIO
+try:
+    import pyzipper as zipfile
+except ImportError:
+    import zipfile
 
 
 # Convert 2 Bytes If Python 3
@@ -99,10 +105,19 @@ def C2BIP3(string):
         return string
 
 
+def CreateZipFileObject(arg1, arg2):
+    if "AESZipFile" in dir(zipfile):
+        return zipfile.AESZipFile(arg1, arg2)
+    else:
+        return zipfile.ZipFile(arg1, arg2)
+
+
 class cBinaryFile:
-    def __init__(self, file):
+    def __init__(self, file, data=None):
         self.file = file
-        if file == "":
+        if data != None:
+            self.infile = DataIO(data)
+        elif file == "":
             self.infile = sys.stdin
         elif file.lower().startswith("http://") or file.lower().startswith("https://"):
             try:
@@ -116,7 +131,7 @@ class cBinaryFile:
                 sys.exit()
         elif file.lower().endswith(".zip"):
             try:
-                self.zipfile = zipfile.ZipFile(file, "r")
+                self.zipfile = CreateZipFileObject(file, "r")
                 self.infile = self.zipfile.open(self.zipfile.infolist()[0], "r", C2BIP3("infected"))
             except:
                 print("Error opening file %s" % file)
@@ -413,6 +428,7 @@ def GetScriptPath():
     if getattr(sys, "frozen", False):
         return os.path.dirname(sys.executable)
     else:
+        # Azul custom change - required for plugin. (ensures pdfid.ini is loaded to get /URI)
         return os.path.dirname(__file__)
 
 
@@ -428,7 +444,7 @@ def ParseINIFile():
     return keywords
 
 
-def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
+def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False, data=None):
     """Example of XML output:
     <PDFiD ErrorOccured="False" ErrorMessage="" Filename="test.pdf" Header="%PDF-1.1" IsPDF="True" Version="0.0.4" Entropy="4.28">
             <Keywords>
@@ -501,14 +517,14 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
     try:
         attIsPDF = xmlDoc.createAttribute("IsPDF")
         xmlDoc.documentElement.setAttributeNode(attIsPDF)
-        oBinaryFile = cBinaryFile(file)
+        oBinaryFile = cBinaryFile(file, data)
         if extraData:
             oPDFDate = cPDFDate()
             oEntropy = cEntropy()
             oPDFEOF = cPDFEOF()
-        bytesHeader, pdfHeader = FindPDFHeaderRelaxed(oBinaryFile)
+        (bytesHeader, pdfHeader) = FindPDFHeaderRelaxed(oBinaryFile)
         if disarm:
-            pathfile, extension = os.path.splitext(file)
+            (pathfile, extension) = os.path.splitext(file)
             fOut = open(pathfile + ".disarmed" + extension, "wb")
             for byteHeader in bytesHeader:
                 fOut.write(C2BIP3(chr(byteHeader)))
@@ -532,8 +548,8 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
         byte = oBinaryFile.byte()
         while byte != None:
             char = chr(byte)
-            charUpper = char.upper()
-            if charUpper >= "A" and charUpper <= "Z" or charUpper >= "0" and charUpper <= "9":
+            charLower = char.lower()
+            if charLower >= "a" and charLower <= "z" or charLower >= "0" and charLower <= "9":
                 word += char
                 wordExact.append(char)
             elif slash == "/" and char == "#":
@@ -542,8 +558,8 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
                     d2 = oBinaryFile.byte()
                     if (
                         d2 != None
-                        and (chr(d1) >= "0" and chr(d1) <= "9" or chr(d1).upper() >= "A" and chr(d1).upper() <= "F")
-                        and (chr(d2) >= "0" and chr(d2) <= "9" or chr(d2).upper() >= "A" and chr(d2).upper() <= "F")
+                        and (chr(d1) >= "0" and chr(d1) <= "9" or chr(d1).lower() >= "a" and chr(d1).lower() <= "f")
+                        and (chr(d2) >= "0" and chr(d2) <= "9" or chr(d2).lower() >= "a" and chr(d2).lower() <= "f")
                     ):
                         word += chr(int(chr(d1) + chr(d2), 16))
                         wordExact.append(int(chr(d1) + chr(d2), 16))
@@ -557,14 +573,14 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
                     else:
                         oBinaryFile.unget(d2)
                         oBinaryFile.unget(d1)
-                        word, wordExact, hexcode, lastName, insideStream = UpdateWords(
+                        (word, wordExact, hexcode, lastName, insideStream) = UpdateWords(
                             word, wordExact, slash, words, hexcode, allNames, lastName, insideStream, oEntropy, fOut
                         )
                         if disarm:
                             fOut.write(C2BIP3(char))
                 else:
                     oBinaryFile.unget(d1)
-                    word, wordExact, hexcode, lastName, insideStream = UpdateWords(
+                    (word, wordExact, hexcode, lastName, insideStream) = UpdateWords(
                         word, wordExact, slash, words, hexcode, allNames, lastName, insideStream, oEntropy, fOut
                     )
                     if disarm:
@@ -572,7 +588,7 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
             else:
                 oCVE_2009_3459.Check(lastName, word)
 
-                word, wordExact, hexcode, lastName, insideStream = UpdateWords(
+                (word, wordExact, hexcode, lastName, insideStream) = UpdateWords(
                     word, wordExact, slash, words, hexcode, allNames, lastName, insideStream, oEntropy, fOut
                 )
                 if char == "/":
@@ -592,7 +608,7 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
                 oPDFEOF.parse(char)
 
             byte = oBinaryFile.byte()
-        word, wordExact, hexcode, lastName, insideStream = UpdateWords(
+        (word, wordExact, hexcode, lastName, insideStream) = UpdateWords(
             word, wordExact, slash, words, hexcode, allNames, lastName, insideStream, oEntropy, fOut
         )
 
@@ -626,7 +642,7 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
     attCountNonStream = xmlDoc.createAttribute("NonStreamCount")
     xmlDoc.documentElement.setAttributeNode(attCountNonStream)
     if oEntropy != None:
-        countAll, entropyAll, countStream, entropyStream, countNonStream, entropyNonStream = oEntropy.calc()
+        (countAll, entropyAll, countStream, entropyStream, countNonStream, entropyNonStream) = oEntropy.calc()
         attEntropyAll.nodeValue = "%f" % entropyAll
         attCountAll.nodeValue = "%d" % countAll
         if entropyStream == None:
@@ -964,6 +980,7 @@ def PDFiD2JSON(xmlDoc, force):
         "keywords": keywords,
         "dates": dates,
     }
+    # Azul custom - return format of keywords, dates and complete is modified for simplicity of Azul plugin usage.
     complete = {"pdfid": data}
     result = json.dumps(complete)
     return result
@@ -1194,7 +1211,7 @@ https://DidierStevens.com"""
         default=False,
         help="Recurse directories (wildcards and here files (@...) allowed)",
     )
-    options, args = oParser.parse_args()
+    (options, args) = oParser.parse_args()
 
     if len(args) == 0:
         if options.disarm:
