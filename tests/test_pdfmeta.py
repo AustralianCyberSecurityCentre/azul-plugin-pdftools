@@ -35,8 +35,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="fb5757c13b6be5ddfcc5df34110bd742ec39d572fc12090af877b842e6569026",
+                        sha256="fb5757c13b6be5ddfcc5df34110bd742ec39d572fc12090af877b842e6569026",
                         features={
                             "document_created": [FV(datetime.datetime(2015, 12, 8, 23, 52, 52))],
                             "document_page_count": [FV(1)],
@@ -74,8 +73,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="080f79a5c58bc092fc9b99939cb3db35232bb2dd02f2345b0a87e73b0bcf2366",
+                        sha256="080f79a5c58bc092fc9b99939cb3db35232bb2dd02f2345b0a87e73b0bcf2366",
                         features={
                             "document_created": [FV(datetime.datetime(2015, 12, 8, 23, 52, 52))],
                             "document_page_count": [FV(1)],
@@ -115,8 +113,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="36abae6e31d591ab08a99c7b30bcb8dc3f208fa625f189c594eaf4caee1de394",
+                        sha256="36abae6e31d591ab08a99c7b30bcb8dc3f208fa625f189c594eaf4caee1de394",
                         features={"tag": [FV("encrypted_pdf")]},
                     )
                 ],

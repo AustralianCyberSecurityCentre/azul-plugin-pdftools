@@ -6,6 +6,7 @@ from tempfile import NamedTemporaryFile
 from azul_runner import (
     BinaryPlugin,
     Feature,
+    FeatureType,
     FeatureValue,
     Job,
     State,
@@ -25,16 +26,28 @@ class AzulPluginPdfId(BinaryPlugin):
         filter_data_types={"content": ["document/pdf", "document/pdf/"]},
     )
     FEATURES = [
-        Feature(name="pdf_version", desc="PDF version header", type=str),
-        Feature(name="pdf_keyword_count", desc="Number of times the labelled keyword appears in document", type=int),
-        Feature(name="pdf_keyword_hex_count", desc="Count of keyword with hex encoding in document", type=int),
-        Feature(name="pdf_date_field", desc="Timestamp field appearing in document", type=str),  # unparsed values
-        Feature(name="pdf_entropy_stream", desc="Entropy across stream data", type=float),
-        Feature(name="pdf_entropy_nonstream", desc="Entropy across contents outside of streams", type=float),
-        Feature(name="pdf_entropy_total", desc="Entropy across entire document contents", type=float),
-        Feature(name="pdf_trailing_bytes", desc="Count of bytes after last PDF %%EOF marker", type=int),
-        Feature(name="pdf_eof_count", desc="Count of PDF %%EOF markers", type=int),
-        Feature(name="tag", desc="Any information label about the document", type=str),
+        Feature(name="pdf_version", desc="PDF version header", type=FeatureType.String),
+        Feature(
+            name="pdf_keyword_count",
+            desc="Number of times the labelled keyword appears in document",
+            type=FeatureType.Integer,
+        ),
+        Feature(
+            name="pdf_keyword_hex_count",
+            desc="Count of keyword with hex encoding in document",
+            type=FeatureType.Integer,
+        ),
+        Feature(
+            name="pdf_date_field", desc="Timestamp field appearing in document", type=FeatureType.String
+        ),  # unparsed values
+        Feature(name="pdf_entropy_stream", desc="Entropy across stream data", type=FeatureType.Float),
+        Feature(name="pdf_entropy_nonstream", desc="Entropy across contents outside of streams", type=FeatureType.Float),
+        Feature(name="pdf_entropy_total", desc="Entropy across entire document contents", type=FeatureType.Float),
+        Feature(
+            name="pdf_trailing_bytes", desc="Count of bytes after last PDF %%EOF marker", type=FeatureType.Integer
+        ),
+        Feature(name="pdf_eof_count", desc="Count of PDF %%EOF markers", type=FeatureType.Integer),
+        Feature(name="tag", desc="Any information label about the document", type=FeatureType.String),
     ]
 
     @staticmethod
