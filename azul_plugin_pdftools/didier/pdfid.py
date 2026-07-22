@@ -92,7 +92,7 @@ if sys.version_info[0] >= 3:
 else:
     from cStringIO import StringIO as DataIO
 try:
-    import pyzipper as zipfile
+    import pyzipper as zipfile  # ty: ignore[unresolved-import]
 except ImportError:
     import zipfile
 
@@ -107,7 +107,7 @@ def C2BIP3(string):
 
 def CreateZipFileObject(arg1, arg2):
     if "AESZipFile" in dir(zipfile):
-        return zipfile.AESZipFile(arg1, arg2)
+        return zipfile.AESZipFile(arg1, arg2)  # ty: ignore[unresolved-attribute]
     else:
         return zipfile.ZipFile(arg1, arg2)
 

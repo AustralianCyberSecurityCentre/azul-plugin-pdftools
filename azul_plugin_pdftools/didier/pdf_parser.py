@@ -98,7 +98,6 @@ import time
 import os
 import textwrap
 import json
-from typing import Any
 
 if sys.version_info[0] >= 3:
     from io import StringIO
@@ -113,11 +112,11 @@ else:
     urllib23 = urllib2
     import ConfigParser
 try:
-    import yara
+    import yara  # ty: ignore[unresolved-import]
 except:
     pass
 try:
-    import pyzipper as zipfile
+    import pyzipper as zipfile  # ty: ignore[unresolved-import]
 except ImportError:
     import zipfile
 
@@ -226,7 +225,7 @@ def Obj2Str(content):
 
 def CreateZipFileObject(arg1, arg2):
     if "AESZipFile" in dir(zipfile):
-        return zipfile.AESZipFile(arg1, arg2)
+        return zipfile.AESZipFile(arg1, arg2)  # ty: ignore[unresolved-attribute]
     else:
         return zipfile.ZipFile(arg1, arg2)
 
