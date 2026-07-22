@@ -2,6 +2,7 @@
 
 import json
 from tempfile import NamedTemporaryFile
+from typing import Any
 
 from azul_runner import (
     BinaryPlugin,
@@ -41,7 +42,9 @@ class AzulPluginPdfId(BinaryPlugin):
             name="pdf_date_field", desc="Timestamp field appearing in document", type=FeatureType.String
         ),  # unparsed values
         Feature(name="pdf_entropy_stream", desc="Entropy across stream data", type=FeatureType.Float),
-        Feature(name="pdf_entropy_nonstream", desc="Entropy across contents outside of streams", type=FeatureType.Float),
+        Feature(
+            name="pdf_entropy_nonstream", desc="Entropy across contents outside of streams", type=FeatureType.Float
+        ),
         Feature(name="pdf_entropy_total", desc="Entropy across entire document contents", type=FeatureType.Float),
         Feature(
             name="pdf_trailing_bytes", desc="Count of bytes after last PDF %%EOF marker", type=FeatureType.Integer
@@ -61,7 +64,7 @@ class AzulPluginPdfId(BinaryPlugin):
 
     def execute(self, job: Job):
         """Process any PDF Documents and extract high-level features."""
-        features = {}
+        features: dict[str, Any] = {}
         # only takes filepath as input not buffer
         with NamedTemporaryFile(delete=True) as tmp:
             tmp.write(job.get_data().read())

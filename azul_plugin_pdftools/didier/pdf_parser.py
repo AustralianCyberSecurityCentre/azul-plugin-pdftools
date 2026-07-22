@@ -98,6 +98,7 @@ import time
 import os
 import textwrap
 import json
+from typing import Any
 
 if sys.version_info[0] >= 3:
     from io import StringIO
@@ -730,7 +731,7 @@ class cPDFElementIndirectObject:
                     message = "FlateDecode decompress failed"
                     if len(data) > 0 and ord(data[0]) & 0x0F != 8:
                         message += ", unexpected compression method: %02x" % ord(data[0])
-                    return message + ". zlib.error %s" % e.message
+                    return f"{message}. zlib.error {e}"
             elif EqualCanonical(filter, "/ASCIIHexDecode") or EqualCanonical(filter, "/AHx"):
                 try:
                     data = ASCIIHexDecode(data)
@@ -810,9 +811,10 @@ def TrimRWhiteSpace(data):
 
 
 class cPDFParseDictionary:
-    def __init__(self, content, nocanonicalizedoutput):
+    def __init__(self, content, nocanonicalizedoutput, verbose: bool = False):
         self.content = content
         self.nocanonicalizedoutput = nocanonicalizedoutput
+        self.verbose = verbose
         dataTrimmed = TrimLWhiteSpace(TrimRWhiteSpace(self.content))
         if dataTrimmed == []:
             self.parsed = None
@@ -932,6 +934,8 @@ class cPDFParseDictionary:
         self.PrettyPrintSub(prefix, self.parsed)
 
     def Get(self, select):
+        if self.parsed is None:
+            raise ValueError("Expected self.parsed to be a dict, got None")
         for key, value in self.parsed:
             if key == select:
                 return value
@@ -1129,7 +1133,7 @@ def FlateDecode(data):
         count = 0
         for byte in C2BIP3(data):
             try:
-                oStringIO.write(oDecompress.decompress(byte))
+                oStringIO.write(oDecompress.decompress(byte).decode())
                 count += 1
             except:
                 break
@@ -1170,7 +1174,7 @@ class LZWDecoder(object):
         self.buff = 0
         self.bpos = 8
         self.nbits = 9
-        self.table = None
+        self.table: list[str | None] | None = None
         self.prevbuf = None
         return
 
@@ -1210,8 +1214,12 @@ class LZWDecoder(object):
         elif code == 257:
             pass
         elif not self.prevbuf:
+            if self.table is None:
+                raise ValueError("Expected self.table to be list[str | None], got None")
             x = self.prevbuf = self.table[code]
         else:
+            if self.table is None:
+                raise ValueError("Expected self.table to be list[str | None], got None")
             if code < len(self.table):
                 x = self.table[code]
                 self.table.append(self.prevbuf + x[0])
@@ -1356,7 +1364,7 @@ def YARACompile(ruledata):
 
 
 def AddDecoder(cClass):
-    global decoders
+    global decoders  # ty: ignore[unresolved-global] False positive, this gets declared in Main()
 
     decoders.append(cClass)
 
@@ -1469,7 +1477,7 @@ def HexAsciiDumpLine(data):
 
 def ParseINIFile():
     oConfigParser = ConfigParser.ConfigParser(allow_no_value=True)
-    oConfigParser.optionxform = str
+    oConfigParser.optionxform = str  # ty: ignore[invalid-assignment]
     oConfigParser.read(os.path.join(GetScriptPath(), "pdfid.ini"))
     keywords = []
     if oConfigParser.has_section("keywords"):
@@ -1493,12 +1501,14 @@ def GetArguments():
 
 class cHashCRC32:
     def __init__(self):
-        self.crc32 = None
+        self.crc32: int | None = None
 
     def update(self, data):
         self.crc32 = zlib.crc32(data)
 
     def hexdigest(self):
+        if self.crc32 is None:
+            raise ValueError("Expected self.crc32 to be an ")
         return "%08x" % (self.crc32 & 0xFFFFFFFF)
 
 
@@ -1579,7 +1589,7 @@ class cMyJSONOutput:
 def Main():
     """pdf-parser, use it to parse a PDF document"""
 
-    global decoders
+    global decoders  # ty: ignore[unresolved-global] not sure why this is declared the way it is, but let's not mess with it
 
     oParser = optparse.OptionParser(
         usage="usage: %prog [options] pdf-file|zip-file|url\n" + __description__, version="%prog " + __version__
@@ -1851,6 +1861,8 @@ def Main():
                     elif object.type == PDF_ELEMENT_TRAILER:
                         cntTrailer += 1
                         oPDFParseDictionary = cPDFParseDictionary(object.content[1:], options.nocanonicalizedoutput)
+                        if oPDFParseDictionary.parsed is None:
+                            raise ValueError("Expected oPDFParseDictionary.parsed to be a dictionary, got None")
                         for keyTrailer, valueTrailer in oPDFParseDictionary.parsed:
                             if (
                                 len(valueTrailer) == 3

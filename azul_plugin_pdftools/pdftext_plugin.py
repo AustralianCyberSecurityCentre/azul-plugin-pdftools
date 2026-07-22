@@ -7,6 +7,7 @@ Any URI objects in the document are also extracted and raised as network feature
 
 from contextlib import closing
 from io import StringIO
+from typing import BinaryIO, cast
 
 from azul_runner import (
     BinaryPlugin,
@@ -52,7 +53,7 @@ class AzulPluginPdfText(BinaryPlugin):
     def execute(self, job: Job):
         """Extract text and URI objects from a PDF document using pdfminer."""
         try:
-            parser = PDFParser(job.get_data())
+            parser = PDFParser(cast(BinaryIO, job.get_data()))
             doc = PDFDocument(parser)
         except PDFPasswordIncorrect:
             self.add_feature_values("tag", "encrypted_pdf")
@@ -69,7 +70,7 @@ class AzulPluginPdfText(BinaryPlugin):
             interpreter = PDFPageInterpreter(rscrmgr, device)
             for i, page in enumerate(PDFPage.create_pages(doc)):
                 interpreter.process_page(page)
-                if i >= self.cfg.max_page_count:
+                if i >= self.cfg.max_page_count:  # ty: ignore[unresolved-attribute] ty doesn't understanda add_settings
                     break
 
         urls = set()
@@ -78,7 +79,7 @@ class AzulPluginPdfText(BinaryPlugin):
             for objid in xref.get_objids():
                 try:
                     obj = doc.getobj(objid)
-                    self.url_recurse(obj, urls)
+                    self.url_recurse(obj, urls) # ty: ignore[invalid-argument-type] ty doesn't like possibility of non-dict/list/PDFStream obj
                 except Exception as ex:
                     print(ex)
                     continue
@@ -112,10 +113,10 @@ class AzulPluginPdfText(BinaryPlugin):
             for k, v in obj.items():
                 if k == "URI" and isinstance(v, bytes):
                     urls.add(v.decode("utf-8"))
-                self.url_recurse(v, urls)
+                self.url_recurse(v, urls) # ty: ignore[invalid-argument-type] ty doesn't like possibility of non-dict/list/PDFStream v, but it will just be ignored
         elif isinstance(obj, list):
             for v in obj:
-                self.url_recurse(v, urls)
+                self.url_recurse(v, urls) # ty: ignore[invalid-argument-type] ty doesn't like possibility of non-dict/list/PDFStream v, but it will just be ignored
         elif isinstance(obj, PDFStream):
             self.url_recurse(obj.attrs, urls)
 

@@ -1,6 +1,7 @@
 """Analyse PDF's using poppler-tools pdfinfo utility."""
 
 from tempfile import NamedTemporaryFile
+from typing import Any
 
 from azul_runner import BinaryPlugin, Feature, FeatureType, Job, add_settings, cmdline_run
 
@@ -42,12 +43,12 @@ class AzulPluginPdfInfo(BinaryPlugin):
 
     def execute(self, job: Job):
         """Run pdfinfo tool across binary."""
-        self.features = {}
+        self.features: dict[str, Any] = {}
         with NamedTemporaryFile(delete=True) as tmp:
             tmp.write(job.get_data().read())
             tmp.flush()
             try:
-                meta = Parser(tmp.name).info
+                meta: dict[str, Any] = Parser(tmp.name).info
             except EncryptedError:
                 self.add_feature_values("tag", "encrypted_pdf")
                 return
