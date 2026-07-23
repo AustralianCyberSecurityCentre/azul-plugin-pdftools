@@ -1,4 +1,5 @@
 # ruff: noqa
+# ty: ignore
 
 __description__ = "Tool to test a PDF file"
 __author__ = "Didier Stevens"
@@ -92,7 +93,7 @@ if sys.version_info[0] >= 3:
 else:
     from cStringIO import StringIO as DataIO
 try:
-    import pyzipper as zipfile  # ty: ignore[unresolved-import]
+    import pyzipper as zipfile
 except ImportError:
     import zipfile
 
@@ -107,7 +108,7 @@ def C2BIP3(string):
 
 def CreateZipFileObject(arg1, arg2):
     if "AESZipFile" in dir(zipfile):
-        return zipfile.AESZipFile(arg1, arg2)  # ty: ignore[unresolved-attribute]
+        return zipfile.AESZipFile(arg1, arg2)
     else:
         return zipfile.ZipFile(arg1, arg2)
 
@@ -163,7 +164,7 @@ class cBinaryFile:
         inbytes = self.infile.read(size - len(self.ungetted))
         if inbytes == "":
             self.infile.close()
-        if isinstance(inbytes, str):
+        if type(inbytes) == type(""):
             result = self.ungetted + [ord(b) for b in inbytes]
         else:
             result = self.ungetted + [b for b in inbytes]
@@ -434,7 +435,7 @@ def GetScriptPath():
 
 def ParseINIFile():
     oConfigParser = ConfigParser.ConfigParser(allow_no_value=True)
-    oConfigParser.optionxform = str  # ty: ignore[invalid-assignment]
+    oConfigParser.optionxform = str
     oConfigParser.read(os.path.join(GetScriptPath(), "pdfid.ini"))
     keywords = []
     if oConfigParser.has_section("keywords"):
@@ -509,8 +510,6 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False, data
     XMLAddAttribute(xmlDoc, "Filename", file)
     attErrorOccured = XMLAddAttribute(xmlDoc, "ErrorOccured", "False")
     attErrorMessage = XMLAddAttribute(xmlDoc, "ErrorMessage", "")
-    if xmlDoc.documentElement is None:
-        raise ValueError("Expected xmlDoc.documentElement to be a Document, got None")
 
     oPDFDate = None
     oEntropy = None
@@ -579,8 +578,6 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False, data
                             word, wordExact, slash, words, hexcode, allNames, lastName, insideStream, oEntropy, fOut
                         )
                         if disarm:
-                            if fOut is None:
-                                raise ValueError("Expected fOut to be a BufferedWriter, got None")
                             fOut.write(C2BIP3(char))
                 else:
                     oBinaryFile.unget(d1)
@@ -588,8 +585,6 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False, data
                         word, wordExact, slash, words, hexcode, allNames, lastName, insideStream, oEntropy, fOut
                     )
                     if disarm:
-                        if fOut is None:
-                            raise ValueError("Expected fOut to be a BufferedWriter, got None")
                         fOut.write(C2BIP3(char))
             else:
                 oCVE_2009_3459.Check(lastName, word)
@@ -602,8 +597,6 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False, data
                 else:
                     slash = ""
                 if disarm:
-                    if fOut is None:
-                        raise ValueError("Expected fOut to be a BufferedWriter, got None")
                     fOut.write(C2BIP3(char))
 
             if oPDFDate != None and oPDFDate.parse(char) != None:
@@ -635,8 +628,6 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False, data
         attErrorMessage.nodeValue = traceback.format_exc()
 
     if disarm:
-        if fOut is None:
-            raise ValueError("Expected fOut to be a BufferedWriter, got None")
         fOut.close()
 
     attEntropyAll = xmlDoc.createAttribute("TotalEntropy")
@@ -1021,7 +1012,7 @@ def ProcessAt(argument):
 
 
 def AddPlugin(cClass):
-    global plugins  # ty: ignore[unresolved-global] False positive, this gets declared in Main()
+    global plugins
 
     plugins.append(cClass)
 
@@ -1093,7 +1084,7 @@ class cExpandFilenameArguments:
         for filename, expression in self.filenameexpressions:
             hashfile = False
             try:
-                hashfile = FilenameCheckHash(filename, self.literalfilenames)[0] == FCH_DATA  # ty: ignore[unresolved-reference] FilenameCheckHash does not seem to be defined anywhere, but if we're just going to ignore errors with a bare except anyway then just leave it as it.
+                hashfile = FilenameCheckHash(filename, self.literalfilenames)[0] == FCH_DATA
             except:
                 pass
             if filename == "" or hashfile:
@@ -1146,7 +1137,7 @@ def LoadPlugins(plugins, verbose):
 
 
 def PDFiDMain(filenames, options):
-    global plugins  # ty: ignore[unresolved-global] not sure why this is declared the way it is, but let's not mess with it
+    global plugins
     plugins = []
     LoadPlugins(options.plugins, options.verbose)
 
