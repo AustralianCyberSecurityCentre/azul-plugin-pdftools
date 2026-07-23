@@ -1,4 +1,5 @@
 # ruff: noqa
+# ty: ignore
 
 __description__ = "pdf-parser, use it to parse a PDF document"
 __author__ = "Didier Stevens"

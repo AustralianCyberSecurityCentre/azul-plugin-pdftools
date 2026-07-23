@@ -35,8 +35,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="fb5757c13b6be5ddfcc5df34110bd742ec39d572fc12090af877b842e6569026",
+                        sha256="fb5757c13b6be5ddfcc5df34110bd742ec39d572fc12090af877b842e6569026",
                         data=[
                             EventData(
                                 hash="bac199e7184664a42aacec177767c0be390d635beab3d3194acd6770623869dd", label="text"
@@ -71,8 +70,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="080f79a5c58bc092fc9b99939cb3db35232bb2dd02f2345b0a87e73b0bcf2366",
+                        sha256="080f79a5c58bc092fc9b99939cb3db35232bb2dd02f2345b0a87e73b0bcf2366",
                         data=[
                             EventData(
                                 hash="bac199e7184664a42aacec177767c0be390d635beab3d3194acd6770623869dd", label="text"
@@ -107,8 +105,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="36abae6e31d591ab08a99c7b30bcb8dc3f208fa625f189c594eaf4caee1de394",
+                        sha256="36abae6e31d591ab08a99c7b30bcb8dc3f208fa625f189c594eaf4caee1de394",
                         features={"tag": [FV("encrypted_pdf")]},
                     )
                 ],
@@ -151,8 +148,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED_WITH_ERRORS, message="Malformed PDF that failed parsing."),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="10bb21189de031c43b63747f2030d00031c06570787c38a0df6facb9ea1b0b2d",
+                        sha256="10bb21189de031c43b63747f2030d00031c06570787c38a0df6facb9ea1b0b2d",
                         features={"malformed": [FV("Malformed PDF that failed parsing.")]},
                     )
                 ],
@@ -179,8 +175,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="ca36e3321a09282ddfadc4a891dc02ddf3b4c6c45046bfd4b7baf99e151323a7",
+                        sha256="ca36e3321a09282ddfadc4a891dc02ddf3b4c6c45046bfd4b7baf99e151323a7",
                         data=[
                             EventData(
                                 hash="61e31863f8847980ed211819431c3caf2eccf3d20edca9591498d2b26c5416a2", label="text"

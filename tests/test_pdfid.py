@@ -82,8 +82,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="36abae6e31d591ab08a99c7b30bcb8dc3f208fa625f189c594eaf4caee1de394",
+                        sha256="36abae6e31d591ab08a99c7b30bcb8dc3f208fa625f189c594eaf4caee1de394",
                         features={
                             "pdf_entropy_nonstream": [FV(5.070577)],
                             "pdf_entropy_stream": [FV(7.976922)],
@@ -149,8 +148,7 @@ class TestExecute(test_template.TestPlugin):
                 state=State(State.Label.COMPLETED),
                 events=[
                     Event(
-                        entity_type="binary",
-                        entity_id="4d344e92a23c84984e53012b89425958983cb0fd6a76a9e9236f6e1fa64a6d8b",
+                        sha256="4d344e92a23c84984e53012b89425958983cb0fd6a76a9e9236f6e1fa64a6d8b",
                         features={
                             "pdf_entropy_nonstream": [FV(3.276496)],
                             "pdf_entropy_total": [FV(3.276496)],

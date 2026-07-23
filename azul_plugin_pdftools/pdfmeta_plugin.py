@@ -1,9 +1,9 @@
 """Analyse PDF's using poppler-tools pdfinfo utility."""
 
-from datetime import datetime
 from tempfile import NamedTemporaryFile
+from typing import Any
 
-from azul_runner import BinaryPlugin, Feature, Job, add_settings, cmdline_run
+from azul_runner import BinaryPlugin, Feature, FeatureType, Job, add_settings, cmdline_run
 
 from .pdfinfo import EncryptedError, ExecutionError
 from .pdfinfo import PDFInfo as Parser
@@ -18,37 +18,37 @@ class AzulPluginPdfInfo(BinaryPlugin):
         filter_data_types={"content": ["document/pdf", "document/pdf/"]},
     )
     FEATURES = [
-        Feature("document_title", desc="Document title", type=str),
-        Feature("document_author", desc="Document author name", type=str),
-        Feature("document_company", desc="Company name of user who authored the document", type=str),
-        Feature("document_created", desc="Time the document was created", type=datetime),
-        Feature("document_last_saved", desc="Time the document was last saved", type=datetime),
-        Feature("document_page_count", desc="Count of pages in the document", type=int),
-        Feature("pdf_author", desc="Author of the PDF document", type=str),
-        Feature("pdf_title", desc="Title of the PDF document", type=str),
-        Feature("pdf_version", desc="PDF Version extracted from document header", type=str),
-        Feature("pdf_page_rotation", desc="Rotation of page layout in degrees", type=int),
-        Feature("pdf_page_size", desc="Page dimensions for the document", type=str),
-        Feature("pdf_page_count", desc="Number of pages in the PDF document", type=int),
-        Feature("pdf_date_created", desc="Creation timestamp of the PDF document", type=datetime),
-        Feature("pdf_date_modified", desc="Last modified timestamp of the PDF document", type=datetime),
-        Feature("pdf_producer", desc="Application/library that produced the PDF", type=str),
-        Feature("pdf_creator", desc="Application/library that created the PDF", type=str),
-        Feature("pdf_form_name", desc="Form template used for the PDF document", type=str),
-        Feature("pdf_encryption", desc="Encryption algorithm used to protect the document", type=str),
-        Feature("pdf_keyword", desc="Keywords stored in properties for the PDF document", type=str),
-        Feature("processing_failure", desc="Error when attempting to parse the document", type=str),
-        Feature("tag", desc="An informational label about the document", type=str),
+        Feature("document_title", desc="Document title", type=FeatureType.String),
+        Feature("document_author", desc="Document author name", type=FeatureType.String),
+        Feature("document_company", desc="Company name of user who authored the document", type=FeatureType.String),
+        Feature("document_created", desc="Time the document was created", type=FeatureType.Datetime),
+        Feature("document_last_saved", desc="Time the document was last saved", type=FeatureType.Datetime),
+        Feature("document_page_count", desc="Count of pages in the document", type=FeatureType.Integer),
+        Feature("pdf_author", desc="Author of the PDF document", type=FeatureType.String),
+        Feature("pdf_title", desc="Title of the PDF document", type=FeatureType.String),
+        Feature("pdf_version", desc="PDF Version extracted from document header", type=FeatureType.String),
+        Feature("pdf_page_rotation", desc="Rotation of page layout in degrees", type=FeatureType.Integer),
+        Feature("pdf_page_size", desc="Page dimensions for the document", type=FeatureType.String),
+        Feature("pdf_page_count", desc="Number of pages in the PDF document", type=FeatureType.Integer),
+        Feature("pdf_date_created", desc="Creation timestamp of the PDF document", type=FeatureType.Datetime),
+        Feature("pdf_date_modified", desc="Last modified timestamp of the PDF document", type=FeatureType.Datetime),
+        Feature("pdf_producer", desc="Application/library that produced the PDF", type=FeatureType.String),
+        Feature("pdf_creator", desc="Application/library that created the PDF", type=FeatureType.String),
+        Feature("pdf_form_name", desc="Form template used for the PDF document", type=FeatureType.String),
+        Feature("pdf_encryption", desc="Encryption algorithm used to protect the document", type=FeatureType.String),
+        Feature("pdf_keyword", desc="Keywords stored in properties for the PDF document", type=FeatureType.String),
+        Feature("processing_failure", desc="Error when attempting to parse the document", type=FeatureType.String),
+        Feature("tag", desc="An informational label about the document", type=FeatureType.String),
     ]
 
     def execute(self, job: Job):
         """Run pdfinfo tool across binary."""
-        self.features = {}
+        self.features: dict[str, Any] = {}
         with NamedTemporaryFile(delete=True) as tmp:
             tmp.write(job.get_data().read())
             tmp.flush()
             try:
-                meta = Parser(tmp.name).info
+                meta: dict[str, Any] = Parser(tmp.name).info
             except EncryptedError:
                 self.add_feature_values("tag", "encrypted_pdf")
                 return

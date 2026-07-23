@@ -1,4 +1,5 @@
 # ruff: noqa
+# ty: ignore
 
 __description__ = "Tool to test a PDF file"
 __author__ = "Didier Stevens"
