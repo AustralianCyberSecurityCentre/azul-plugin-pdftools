@@ -113,10 +113,10 @@ class AzulPluginPdfText(BinaryPlugin):
             for k, v in obj.items():
                 if k == "URI" and isinstance(v, bytes):
                     urls.add(v.decode("utf-8"))
-                self.url_recurse(v, urls)  # ty: ignore[invalid-argument-type] ty doesn't like possibility of non-dict/list/PDFStream v, but it will just be ignored
+                self.url_recurse(v, urls)
         elif isinstance(obj, list):
             for v in obj:
-                self.url_recurse(v, urls)  # ty: ignore[invalid-argument-type] ty doesn't like possibility of non-dict/list/PDFStream v, but it will just be ignored
+                self.url_recurse(v, urls)
         elif isinstance(obj, PDFStream):
             self.url_recurse(obj.attrs, urls)
 
