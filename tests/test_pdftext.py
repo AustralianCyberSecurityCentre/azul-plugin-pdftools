@@ -8,7 +8,7 @@ Test the pdftext plugin's ability to extract URI's and text.
 
 from azul_runner import Event, EventData
 from azul_runner import FeatureValue as FV
-from azul_runner import JobResult, State, Uri, test_template
+from azul_runner import JobResult, State, test_template
 
 from azul_plugin_pdftools.pdftext_plugin import AzulPluginPdfText
 
@@ -41,7 +41,7 @@ class TestExecute(test_template.TestPlugin):
                                 hash="bac199e7184664a42aacec177767c0be390d635beab3d3194acd6770623869dd", label="text"
                             )
                         ],
-                        features={"pdf_embedded_uri": [FV(Uri("http://www.google.com/"))]},
+                        features={"pdf_embedded_uri": [FV("http://www.google.com/")]},
                     )
                 ],
                 data={
@@ -76,7 +76,7 @@ class TestExecute(test_template.TestPlugin):
                                 hash="bac199e7184664a42aacec177767c0be390d635beab3d3194acd6770623869dd", label="text"
                             )
                         ],
-                        features={"pdf_embedded_uri": [FV(Uri("http://www.google.com/"))]},
+                        features={"pdf_embedded_uri": [FV("http://www.google.com/")]},
                     )
                 ],
                 data={
