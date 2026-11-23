@@ -70,7 +70,7 @@ class AzulPluginPdfText(BinaryPlugin):
             interpreter = PDFPageInterpreter(rscrmgr, device)
             for i, page in enumerate(PDFPage.create_pages(doc)):
                 interpreter.process_page(page)
-                if i >= self.cfg.max_page_count:  # ty: ignore[unresolved-attribute] ty doesn't understanda add_settings
+                if i >= self.cfg.max_page_count:  # ty: ignore[missing-attribute] ty doesn't understanda add_settings
                     break
 
         urls = set()
